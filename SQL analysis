@@ -1,0 +1,223 @@
+---------- Citywise Market Analysis------------
+
+USE tcg_market_analysis;
+
+-- See all market data
+SELECT * FROM market_data;
+
+-- Which city has most developers?
+SELECT city, registered_developers
+FROM market_data
+ORDER BY registered_developers DESC;
+
+-- Total market size
+SELECT
+    city,
+    registered_developers,
+    active_projects,
+    active_projects * avg_units_per_project AS total_units_in_market,
+    ROUND(registered_developers * 0.30) AS addressable_developers
+FROM market_data
+ORDER BY total_units_in_market DESC;
+
+------- Market Competitor Analysis------------
+
+-- See all competitor features
+SELECT * FROM competitor_features;
+
+-- Features Sirrus.ai is MISSING (competitors have, we don't)
+SELECT feature_name,
+       sell_do, leadsquared, anarock_crm
+FROM competitor_features
+WHERE sirrus_ai = 0
+  AND (sell_do = 1 OR leadsquared = 1 OR anarock_crm = 1);
+
+-- Features ONLY Sirrus.ai has (unique differentiators)
+SELECT feature_name
+FROM competitor_features
+WHERE sirrus_ai = 1
+  AND sell_do = 0
+  AND leadsquared = 0
+  AND anarock_crm = 0;
+
+-- Feature count score per platform
+SELECT
+    'Sirrus.ai'   AS platform, SUM(sirrus_ai)  AS feature_count FROM competitor_features
+UNION ALL
+SELECT 'Sell.Do',       SUM(sell_do)     FROM competitor_features
+UNION ALL
+SELECT 'LeadSquared',   SUM(leadsquared) FROM competitor_features
+UNION ALL
+SELECT 'Anarock CRM',   SUM(anarock_crm) FROM competitor_features
+ORDER BY feature_count DESC;
+
+----------- Sales Team Pipeline Tracker --------------
+
+-- Overall demo outcomes
+SELECT
+    outcome,
+    COUNT(*) AS count,
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM demo_tracker), 1) AS pct
+FROM demo_tracker
+GROUP BY outcome
+ORDER BY count DESC;
+
+-- Sales person performance
+SELECT
+    sales_person,
+    COUNT(*) AS total_demos,
+    SUM(CASE WHEN outcome = 'Interested' THEN 1 ELSE 0 END) AS interested,
+    SUM(CASE WHEN outcome = 'Rejected'   THEN 1 ELSE 0 END) AS rejected,
+    SUM(CASE WHEN outcome = 'Follow_Up'  THEN 1 ELSE 0 END) AS follow_up,
+    ROUND(SUM(CASE WHEN outcome='Interested' THEN 1 ELSE 0 END)
+          *100.0/COUNT(*), 1) AS interest_rate_pct
+FROM demo_tracker
+GROUP BY sales_person
+ORDER BY interested DESC;
+
+-- Demos by city
+SELECT
+    city,
+    COUNT(*) AS demos,
+    SUM(CASE WHEN outcome='Interested' THEN 1 ELSE 0 END) AS interested,
+    ROUND(SUM(CASE WHEN outcome='Interested' THEN 1 ELSE 0 END)
+          *100.0/COUNT(*), 1) AS interest_rate
+FROM demo_tracker
+GROUP BY city
+ORDER BY interest_rate DESC;
+
+----------- Product Non-acceptance Analysis -------------
+
+-- All rejection reasons with count
+SELECT
+    rejection_reason,
+    COUNT(*) AS count,
+    ROUND(COUNT(*) * 100.0 /
+        (SELECT COUNT(*) FROM demo_tracker WHERE outcome = 'Rejected'), 1
+    ) AS pct_of_rejections
+FROM demo_tracker
+WHERE outcome = 'Rejected'
+  AND rejection_reason IS NOT NULL
+GROUP BY rejection_reason
+ORDER BY count DESC;
+
+-- Rejection rate by city
+SELECT
+    city,
+    COUNT(*) AS total_demos,
+    SUM(CASE WHEN outcome='Rejected' THEN 1 ELSE 0 END) AS rejections,
+    ROUND(SUM(CASE WHEN outcome='Rejected' THEN 1 ELSE 0 END)
+          *100.0/COUNT(*), 1) AS rejection_rate
+FROM demo_tracker
+GROUP BY city
+ORDER BY rejection_rate DESC;
+
+-------- Intrest rate segmentation by Developers -------------
+
+-- Interest rate by developer segment
+SELECT
+    dev_segment,
+    COUNT(*) AS total_demos,
+    SUM(CASE WHEN outcome='Interested' THEN 1 ELSE 0 END) AS interested,
+    SUM(CASE WHEN outcome='Rejected'   THEN 1 ELSE 0 END) AS rejected,
+    ROUND(SUM(CASE WHEN outcome='Interested' THEN 1 ELSE 0 END)
+          *100.0/COUNT(*), 1) AS interest_rate_pct
+FROM demo_tracker
+GROUP BY dev_segment
+ORDER BY interest_rate_pct DESC;
+
+-- Average deal size (active units) by segment
+SELECT
+    dev_segment,
+    ROUND(AVG(active_units)) AS avg_units,
+    MIN(active_units) AS min_units,
+    MAX(active_units) AS max_units
+FROM demo_tracker
+GROUP BY dev_segment
+ORDER BY avg_units DESC;
+
+---------------- Bug Module Analysis ------------
+
+-- Bug count by module and priority
+SELECT
+    module,
+    COUNT(*) AS total_bugs,
+    SUM(CASE WHEN priority='Critical' THEN 1 ELSE 0 END) AS critical,
+    SUM(CASE WHEN priority='High'     THEN 1 ELSE 0 END) AS high,
+    SUM(CASE WHEN status='Open'      THEN 1 ELSE 0 END) AS still_open,
+    ROUND(AVG(
+        DATEDIFF(COALESCE(resolved_date, CURDATE()), created_date)
+    ), 1) AS avg_days_to_fix
+FROM bug_tracker
+GROUP BY module
+ORDER BY critical DESC;
+
+-- Monthly bug trend — is bug rate going up or down?
+SELECT
+    DATE_FORMAT(created_date, '%Y-%m') AS month,
+    COUNT(*) AS bugs_logged,
+    SUM(CASE WHEN priority='Critical' THEN 1 ELSE 0 END) AS critical
+FROM bug_tracker
+GROUP BY month
+ORDER BY month;
+
+--------- Share Analysis driven files with Tech Team --------
+
+USE tcg_year1;
+
+-- CALLS TABLE — captures every Exotel call
+-- Without call_duration_sec we can never analyze call quality
+-- Without ai_summary_status we can never track AI failures
+CREATE TABLE IF NOT EXISTS schema_calls (
+    call_id            INT PRIMARY KEY,
+    client_id          INT         NOT NULL,
+    lead_id            INT         NOT NULL,
+    sales_exec_id      INT,
+    call_start_time    DATETIME,
+    call_duration_sec  INT,        -- MUST HAVE: for call quality analysis
+    call_status        VARCHAR(20), -- Connected / Dropped / No_Answer
+    exotel_call_sid    VARCHAR(60), -- MUST HAVE: for debugging Exotel issues
+    ai_summary_status  VARCHAR(20), -- Success / Failed / Pending
+    ai_summary_text    TEXT,
+    pair_score         INT,         -- 0-100 AI confidence score
+    created_at         DATETIME   DEFAULT NOW()
+);
+
+-- LEADS TABLE — every lead created in Sirrus.ai
+CREATE TABLE IF NOT EXISTS schema_leads (
+    lead_id        INT PRIMARY KEY,
+    client_id      INT          NOT NULL,
+    lead_source    VARCHAR(30),  -- Facebook / Google / Walk-in / Reference
+    stage          VARCHAR(30),  -- New/Qualified/Site Visit/Opportunity/Closed
+    assigned_to    INT,
+    budget         BIGINT,       -- MUST HAVE: for segment analysis
+    property_type  VARCHAR(20),
+    final_outcome  VARCHAR(20),  -- Booked / Dropped / In-Progress
+    created_at     DATETIME     DEFAULT NOW(),
+    updated_at     DATETIME     ON UPDATE NOW()
+);
+
+-- USER LOGINS — tracks who logs into Sirrus.ai when
+-- Without this we cannot detect churn risk in Year 2
+CREATE TABLE IF NOT EXISTS schema_user_logins (
+    login_id    INT PRIMARY KEY,
+    client_id   INT          NOT NULL,
+    user_id     INT          NOT NULL,
+    login_time  DATETIME,
+    device_type VARCHAR(20)  -- Mobile / Desktop / Tablet
+);
+
+-- FEATURE LOGS — tracks every button click inside the platform
+-- Enables product analytics: which features are used, which are ignored
+CREATE TABLE IF NOT EXISTS schema_feature_logs (
+    log_id       INT PRIMARY KEY,
+    client_id    INT          NOT NULL,
+    user_id      INT,
+    module       VARCHAR(30),  -- PreSales / Marketing / PostSales
+    feature_name VARCHAR(60),  -- Add Lead / Generate Brochure / Post Update
+    action       VARCHAR(20),  -- Created / Viewed / Updated / Deleted
+    used_at      DATETIME     DEFAULT NOW()
+);
+
+-- Verify all 4 tables created
+SHOW TABLES;
