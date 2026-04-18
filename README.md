@@ -39,8 +39,6 @@ The final output is a Power BI executive dashboard supported by SQL queries, Pyt
 ```text
 sirrus.ai-market-and-sales-analytics/
 │
-├── SQL analysis.sql
-|
 ├── Analysis in python/
 │   ├── Setup_Data.ipynb
 │   ├── Market_Sizing_Analysis.ipynb
@@ -53,6 +51,7 @@ sirrus.ai-market-and-sales-analytics/
 │   └── Monthly_CEO_Report.ipynb
 │
 ├── Python analysis charts/
+├── SQL analysis.sql
 └── Sirrus.ai_Market_and_Sales_Analytics.pbix
 ```
 
