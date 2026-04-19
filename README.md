@@ -2,7 +2,7 @@
 
 An end-to-end analytics project built for Sirrus.ai to support market research, internal sales tracking, product bug analysis, and executive reporting.
 
-This project combines MySQL, SQL, Python, and Power BI to analyze market opportunity, demo performance, developer segmentation, competitor gaps, critical product issues, and monthly leadership decisions.
+This project combines SQL, Python, and Power BI to analyze market opportunity, demo performance, developer segmentation, competitor gaps, critical product issues, and monthly leadership decisions.
 
 ---
 
@@ -36,26 +36,14 @@ The final output is a Power BI executive dashboard supported by SQL queries, Pyt
 
 ## Repository Structure
 
-```text
 sirrus.ai-market-and-sales-analytics/
 │
-├── Analysis in python/
-│   ├── Setup_Data.ipynb
-│   ├── Market_Sizing_Analysis.ipynb
-│   ├── Competitor_Feature_Matrix.ipynb
-│   ├── Demo_Pipeline_Tracker.ipynb
-│   ├── Rejection_Reason_Analysis.ipynb
-│   ├── ICP_Segmentation.ipynb
-│   ├── Bug_Module_Analysis.ipynb
-│   ├── Data_Schema_Design.ipynb
-│   └── Monthly_CEO_Report.ipynb
-│
-├── Python analysis charts/
-├── SQL analysis.sql
-└── Sirrus.ai_Market_and_Sales_Analytics.pbix
-```
+├── SQL analysis                        # MySQL queries for sales & market data
+├── python analysis/                    # Jupyter notebooks — EDA & visualization
+├── python analysis output charts/      # Exported chart PNGs from Python
+├── Dashboard-images/                   # Power BI dashboard screenshots
+└── Sirrus.ai Market & Sales Analysis.pbix   # Full Power BI report
 
----
 
 ## Key Business Questions Answered
 
